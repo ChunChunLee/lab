@@ -14,7 +14,7 @@ import { syncOnce, SYNC_FILE } from './logic/syncEngine.js';
 const SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const API = 'https://www.googleapis.com/drive/v3';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
-const FIELDS = 'id,version,modifiedTime';
+const FIELDS = 'id,version,modifiedTime,md5Checksum';
 const TOKEN_KEY = 'lcm.gtoken';
 const AUTH_KEY = 'lcm.oauth';
 const SILENT_KEY = 'lcm.silentAt';
@@ -329,7 +329,7 @@ export async function startSync() {
       }[result.error] ?? `Google 回傳的錯誤：${result.error}`;
       queueMicrotask(() => alertDialog({ title: '沒有連結 Google 雲端硬碟', message: msg }));
     } else {
-      sync.state = { enabled: true, fileId: null, baseVersion: null, baseHash: null, email: null, lastSyncAt: null };
+      sync.state = { enabled: true, fileId: null, baseVersion: null, baseMd5: null, baseHash: null, email: null, lastSyncAt: null };
       await persist();
       googleDrive(readToken()).email().then((email) => { sync.state.email = email; persist(); rerender(); }).catch(() => {});
     }

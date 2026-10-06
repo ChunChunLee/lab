@@ -1,5 +1,5 @@
 // 離線用：把網頁的檔案存在裝置上，沒有網路也打得開。有新版時會在背景更新，下次打開就是新版。
-const VERSION = 'lcm-2026-10-06-1';
+const VERSION = 'lcm-59ef9da9f8';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css', 'css/views.css',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',

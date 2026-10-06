@@ -31,14 +31,21 @@ function hash(str) {
 function setBase(state, file, h) {
   state.fileId = file.id;
   state.baseVersion = String(file.version);
+  state.baseMd5 = file.md5Checksum ?? null;
   state.baseHash = h;
+}
+
+/** 雲端的檔案和上次同步時一樣嗎（Google 雲端硬碟上傳後還會在背景把版本號往上加，所以優先比對內容的 md5） */
+function sameAsBase(state, meta) {
+  if (meta.md5Checksum && state.baseMd5) return meta.md5Checksum === state.baseMd5;
+  return String(meta.version) === state.baseVersion;
 }
 
 /**
  * 同步一次。env：
- * - drive：{ find(), meta(id), download(id), create(json), update(id, json) }；find、meta、create、update 回傳 { id, version, modifiedTime }，
+ * - drive：{ find(), meta(id), download(id), create(json), update(id, json) }；find、meta、create、update 回傳 { id, version, modifiedTime, md5Checksum }，
  *   meta 找不到檔案時回傳 null
- * - state：{ fileId, baseVersion, baseHash }，上次同步時雲端檔案的版本和資料指紋（會直接修改，呼叫的人負責存起來）
+ * - state：{ fileId, baseVersion, baseMd5, baseHash }，上次同步時雲端檔案的版本和資料指紋（會直接修改，呼叫的人負責存起來）
  * - local()：這台裝置目前的資料
  * - canApply()：現在可以換掉畫面上的資料嗎（正在編輯時先不要）
  * - apply(data)：換成雲端的資料
@@ -68,15 +75,21 @@ export async function syncOnce(env) {
     first = true;
   }
 
-  if (!first && String(meta.version) === state.baseVersion) {
+  if (!first && sameAsBase(state, meta)) {
     if (localHash === state.baseHash) return 'none';
     setBase(state, await drive.update(state.fileId ?? meta.id, encodeData(local)), localHash);
     return 'uploaded';
   }
 
-  // 雲端有別台裝置存的新資料
+  // 雲端可能有別台裝置存的新資料：下載下來比對內容
   const remote = decodeData(await drive.download(meta.id));
   const remoteHash = fingerprint(remote);
+  if (!first && remoteHash === state.baseHash) {
+    // 內容其實沒變（只是版本號變了）
+    if (localHash === state.baseHash) { setBase(state, meta, localHash); return 'none'; }
+    setBase(state, await drive.update(meta.id, encodeData(local)), localHash);
+    return 'uploaded';
+  }
   if (remoteHash === localHash) {
     setBase(state, meta, localHash);
     return 'none';
